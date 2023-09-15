@@ -1,0 +1,16 @@
+[
+    {
+        "cookie": "_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_",
+        "token": "bot token here",
+        "webhook": "webhook link here",
+        "authorized": [
+            "discord id here"
+        ],
+        "watch_speed": 1
+    },
+    {
+        "items": {
+            "item_id": 300
+        }
+    }
+]
