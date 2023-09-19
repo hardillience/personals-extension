@@ -1,128 +1,70 @@
 import pip 
 try:
-    import discord, json, aiohttp, httpx, asyncio, os, time, subprocess, sys, requests, psutil, signal, platform
+    import discord, json, aiohttp, httpx, os, time, subprocess, sys, requests, psutil, signal
     from discord.ext import commands
-    from discord import Embed, Colour, Game
-    from robloxapi import Client
-    from io import BytesIO 
-    from typing import Union 
-    from discord import Webhook 
+    from discord import Embed, Colour
     from urllib.parse import urlparse
 except ModuleNotFoundError:
-    os.system('pip install requests psutil discord.py robloxapi aiohttp')
+    os.system('pip install requests psutil discord.py aiohttp')
     os.execv(sys.executable, [sys.executable] + [sys.argv[0]] + sys.argv[1:])
 
-scriptVersion = 0
-def whichPythonCommand():
-    LocalMachineOS = platform.system()
-    if (
-        LocalMachineOS == "win32"
-        or LocalMachineOS == "win64"
-        or LocalMachineOS == "Windows"
-        or LocalMachineOS == "Android"
-    ):
-        return "python"
-
-if whichPythonCommand() == "python":
-    os.system("cls")
-
 def get_thumbnail(item_id) -> str:
-    res = requests.get(f'https://thumbnails.roblox.com/v1/assets?assetIds={item_id}&size=420x420&format=Png').json()
-    return res['data'][0]['imageUrl']
+    return requests.get(f'https://thumbnails.roblox.com/v1/assets?assetIds={item_id}&size=420x420&format=Png').json()['data'][0]['imageUrl']
 
 def get_itemname(item_id) -> str:
-    res = requests.get(f'https://economy.roblox.com/v2/assets/{item_id}/details').json()
-    return res['Name']
+    return requests.get(f'https://economy.roblox.com/v2/assets/{item_id}/details').json()['Name']
 
+def getidfromurl(link):
+    att1 = urlparse(link).path.split('/')[-2] 
+    att2 = urlparse(link).path.split('/')[-3] 
+    att3 = urlparse(link).path.split('/')[2]
+    val = None
 
-users_api = "https://users.roblox.com/v1/usernames/users"
-
-def getUserId(username):
-    request = {
-        "usernames": [
-            username
-        ],
-        "excludeBannedUsers": True
-    }
-    responseData = requests.post(users_api, json=request)
-    assert responseData.status_code == 200
-    userId = responseData.json()["data"][0]["id"]
-    return userId
+    if att1.isdigit():
+        val = att1
+    elif att2.isdigit():
+        val = att2
+    elif att3.isdigit():
+        val = att3
+    
+    return val
 
 #Load Settings
 with open('settings.json') as f:
     settings = json.load(f)
 
-print("Personals Sniper Extension is now running.")
-
-#Variables
-ROBLOX_API_URL = "https://users.roblox.com/v1/users/authenticated"
-webhook_color = discord.Color.from_rgb(255, 182, 193)
-webhook_url = settings[0]["webhook"]
-autorestart_notify_enabled = True
-intents = discord.Intents.default()
-intents.message_content = True    
-intents.messages = True
-autorestart_task = None
-autorestart_minutes = None
-notify_on_restart = False
-start_time = None
-print_cache = {}
-discord_ids = settings[0]["authorized"][0]
-discord_id = discord_ids
-
-#Class
-class MyBot(commands.AutoShardedBot):
-    async def on_socket_response(self, msg):
-        self._last_socket_response = time.time()
-
-    async def close(self):
-        if self._task:
-            self._task.cancel()
-        await super().close()
-
-    async def on_ready(self):
-        if not hasattr(self, "_task"):
-            self._task = self.loop.create_task(self.check_socket())
-
-    async def check_socket(self):
-        while not self.is_closed():
-            if time.time() - self._last_socket_response > 60:
-                await self.close()
-                await self.start(bot_token)
-            await asyncio.sleep(5)
-
-
-bot = MyBot(command_prefix="!", intents=intents)
-bot._last_socket_response = time.time()
-
-#Functions
-def bot_login(token, ready_event):
-    intents = discord.Intents.default()
-    intents.message_content = True  
-    bot = commands.Bot(command_prefix="!",
-                       intents=intents)
-
-def is_owner(): 
-    async def predicate(ctx):
-        settings = read_settings()
-        authorized_ids = [int(x) for x in settings[0]["authorized"]]
-        return ctx.author.id in authorized_ids
-    return commands.check(predicate)
-
 def read_settings():
     with open('settings.json', 'r') as f:
         return json.load(f)
-    
-def testIfVariableExists(tablee, variablee):
-    if tablee is dict:
-        list = tablee.keys()
+
+webhook_color = discord.Color.from_rgb(255, 182, 193)
+webhook_url = settings[0]["webhook"]
+start_time = None
+
+# Setting up the bot
+bot = commands.Bot(command_prefix="!",intents = discord.Intents.all())
+
+#Events
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("You are not authorized to use this command!")
+
+def is_authorized(): 
+    async def predicate(ctx):
+        settings = read_settings()
+        return ctx.author.id in [int(x) for x in settings[0]["authorized"]]
+    return commands.check(predicate)
+
+def checkvariable(t, var):
+    if t is dict:
+        list = t.keys()
         for i in list:
-            if i == variablee:
+            if i == var:
                 return True
         return False
     else:
-        if variablee in tablee:
+        if var in t:
             return True
         else:
             return False
@@ -133,47 +75,32 @@ def rbx_request(session, method, url, **kwargs):
     if (method == "post") or (method == "put") or (method == "patch") or (method == "delete"):
         if "X-CSRF-TOKEN" in request.headers:
             session.headers["X-CSRF-TOKEN"] = request.headers["X-CSRF-TOKEN"]
-            if request.status_code == 403:  # Request failed, send it again
+            if request.status_code == 403:
                 request = session.request(method, url, **kwargs)
     return request
     
-def restart_main_py():
+def restart_sniper():
     global runningSession
     if runningSession:
         for proc in psutil.process_iter():
-            name = proc.name()
-            if name == "python.exe":
-                cmdline = proc.cmdline()
-                if "main.py" in cmdline[1]:
-                    pid = proc.pid
-                    os.kill(pid, signal.SIGTERM)
+            if proc.name() == "python.exe":
+                if "main.py" in proc.cmdline()[1]:
+                    os.kill(proc.pid, signal.SIGTERM)
         runningSession = subprocess.Popen([sys.executable, "main.py"])
     else:
         print("Personals Process was not found! Using old restarter!")
         for proc in psutil.process_iter():
-            name = proc.name()
-            if name == "python.exe":
-                cmdline = proc.cmdline()
-                if "main.py" in cmdline[1]:
-                    pid = proc.pid
-                    os.kill(pid, signal.SIGTERM)
+            if proc.name() == "python.exe":
+                if "main.py" in proc.cmdline()[1]:
+                    os.kill(proc.pid, signal.SIGTERM)
         runningSession = subprocess.Popen([sys.executable, "main.py"])
 
-async def restart_bot(ctx):
-    try:
-        restart_main_py()
-    except Exception as e:
-        pass
-
-
-async def check_cookie(cookie):
+async def check(cookie):
     async with httpx.AsyncClient() as client:
-        headers = {"Cookie": f".ROBLOSECURITY={cookie}"}
-        response = await client.get(ROBLOX_API_URL, headers=headers)
+        res = await client.get("https://users.roblox.com/v1/users/authenticated", headers={"Cookie": f".ROBLOSECURITY={cookie}"})
 
-    if response.status_code == 200:
-        user_data = response.json()
-        username = user_data["name"]
+    if res.status_code == 200:
+        username = res.json()["name"]
         return True, username
     else:
         return False, None
@@ -181,18 +108,6 @@ async def check_cookie(cookie):
 def overwrite(new_settings):
     with open('settings.json', 'w') as file:
         json.dump(new_settings, file, indent=4)
-
-async def get_user_id_from_cookie(cookie):
-    api_url = "https://www.roblox.com/mobileapi/userinfo"
-    headers = {"Cookie": f".ROBLOSECURITY={cookie}"}
-    async with httpx.AsyncClient() as client:
-        response = await client.get(api_url, headers=headers)
-    if response.status_code == 200:
-        user_data = response.json()
-        return user_data["UserID"]
-    else:
-        return None
-
 
 
 #Events
@@ -219,7 +134,7 @@ bot.remove_command("help")
 #Commands:
 #help command
 @bot.command()
-@is_owner()
+@is_authorized()
 async def help(ctx):
     msg = """# COMMANDS LIST
 
@@ -252,19 +167,19 @@ async def help(ctx):
 
 #webhook command
 @bot.command() 
-@is_owner()
+@is_authorized()
 async def webhook(ctx, webhook_url: str):
     settings = read_settings()
     settings[0]["webhook"] = webhook_url
     overwrite(settings)
     embed = discord.Embed(
-        title="Success!",
-        description=" ``` This webhook has been succesfully set and will be used for the next notifications! ```",
+        title=f"Webhook has been updated successfully!",
+        description=None,
         color=webhook_color
     )
     embed_dict = embed.to_dict()
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
+    async with aiohttp.ClientSession() as s:
+        async with s.post(
             webhook_url,
             json={
                 "embeds": [embed_dict],
@@ -276,10 +191,10 @@ async def webhook(ctx, webhook_url: str):
                 await ctx.send(f"Failed to send the embed to the webhook. HTTP status: {response.status}")
                 return
             
-            if await restart_main_py():
-               print("Succesfully restarted mewt after updating the webhook")
+            if await restart_sniper():
+               print("Webhook updated; restarted successfully.")
             else:
-               print("Error while trying to restart mewt after updating the webhook.")
+               print("Webhook updated; error encountered while restarted.")
 
 #ping
 @bot.command()
@@ -289,39 +204,32 @@ async def ping(ctx):
 
 #speed command
 @bot.command(name='speed')  
-@is_owner()
+@is_authorized()
 async def speed(ctx, new_speed: str):
     try:
         new_speed_float = float(new_speed)
     except ValueError:
-        embed = Embed(title='The watch speed must be a number.', color=Colour.from_rgb(255, 0, 0))
-        await ctx.send(embed=embed)
+        await ctx.send(embed=Embed(title='The watch speed must be a number.', color=Colour.from_rgb(255, 0, 0)))
         return
 
-    
     settings = read_settings()
-    
     if new_speed_float.is_integer():
-        new_speed_value = int(new_speed_float)
+        newest = int(new_speed_float)
     else:
-        new_speed_value = new_speed_float
+        newest = new_speed_float
 
-   
-    settings[0]["watch_speed"] = new_speed_value
-
-    
+    settings[0]["watch_speed"] = newest
     overwrite(settings)
+    await ctx.send(embed=discord.Embed(title=f"Watch speed changed to {str(newest)}.",description=None, color=webhook_color))
 
-    await ctx.send(embed=discord.Embed(title=f"Watch speed changed to {str(new_speed_value)}.",description=None, color=webhook_color))
-
-    if await restart_main_py():
-            print("Updated speed and restarted successfully!")
+    if await restart_sniper():
+            print("Watch speed updated; restarted successfully.")
     else:
-            print("Error while trying to restart after updating the speed")
+            print("Watch speed updated; restarted successfully.")
 
 # view all watching items
 @bot.command(name="watching")
-@is_owner()
+@is_authorized()
 async def watching(ctx):
     settings = read_settings()
     watchlist = settings[1]["items"]
@@ -350,7 +258,7 @@ async def watching(ctx):
         if request.status_code == 200 and item.get("data"):
             for item_data in item["data"]:
                print(item["data"])
-               if testIfVariableExists(item_data, "price"):
+               if checkvariable(item_data, "price"):
                     embedToAdd =  discord.Embed(
                         title=f'Watching: {item_data["name"]}',
                         url=f"https://www.roblox.com/catalog/{str(item_data['id'])}/",
@@ -390,14 +298,14 @@ async def watching(ctx):
 
 # same as above omegalul
 @bot.command(name="w")
-@is_owner()
+@is_authorized()
 async def w(ctx):
     ctx.command = bot.get_command("watching")
     await bot.invoke(ctx)
 
 #add owner
 @bot.command()
-@is_owner()
+@is_authorized()
 async def adduser(ctx, user_id: int):
     settings = read_settings()
     
@@ -415,14 +323,14 @@ async def adduser(ctx, user_id: int):
 
 # same as above omegalul
 @bot.command(name="au")
-@is_owner()
+@is_authorized()
 async def au(ctx):
     ctx.command = bot.get_command("adduser")
     await bot.invoke(ctx)
 
 #remove owner
 @bot.command()
-@is_owner()
+@is_authorized()
 async def removeuser(ctx, user_id: int):
     settings = read_settings()
         
@@ -442,14 +350,14 @@ async def removeuser(ctx, user_id: int):
 
 # same as above omegalul
 @bot.command(name="ru")
-@is_owner()
+@is_authorized()
 async def ru(ctx):
     ctx.command = bot.get_command("removeuser")
     await bot.invoke(ctx)
 
 #owners
 @bot.command()
-@is_owner()
+@is_authorized()
 async def authorized(ctx):
     settings = read_settings()
     authorized_ids = settings[0]["authorized"]
@@ -464,10 +372,10 @@ async def authorized(ctx):
 
 #restart command
 @bot.command()
-@is_owner()
+@is_authorized()
 async def restart(ctx):
     try:
-        restart_main_py()
+        restart_sniper()
         embed = Embed(title="Success!", description="Successfully restarted the bot.", color=Colour.from_rgb(255, 182, 193))
         await ctx.send(embed=embed)
     except Exception as e:
@@ -476,34 +384,32 @@ async def restart(ctx):
 
 #More command
 @bot.command(pass_context = True)
-@is_owner()
+@is_authorized()
 async def info(ctx):
     settings = read_settings()
 
     
-    main_cookie = settings[0]["cookie"]
+    cookie = settings[0]["cookie"]
     watch_speed = settings[0]["watch_speed"]
     # owners = settings[0]["authorized"]
     prefix = bot.command_prefix
     items = settings[1]["items"]
     watching = ', '.join(str(item) for item in items)
 
-    main_cookie_valid, main_username = await check_cookie(main_cookie)
+    valid, username = await check(cookie)
 
     async with httpx.AsyncClient() as client:
-        headers = {"Cookie": f".ROBLOSECURITY={main_cookie}"}
-        response = await client.get(ROBLOX_API_URL, headers=headers)
+        headers = {"Cookie": f".ROBLOSECURITY={cookie}"}
+        res = await client.get("https://users.roblox.com/v1/users/authenticated", headers=headers)
 
-    if response.status_code == 200:
-        user_data = response.json()
-        user_id = user_data["id"]
+    if res.status_code == 200:
+        user_id = res.json()["id"]
 
         
         avatar_api_url = f"https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={user_id}&size=420x420&format=Png&isCircular=false"
         async with httpx.AsyncClient() as client:
             avatar_response = await client.get(avatar_api_url)
-        avatar_data = avatar_response.json()
-        thumbnail_url = avatar_data["data"][0]["imageUrl"]
+        thumbnail_url = avatar_response.json()["data"][0]["imageUrl"]
 
     if start_time is not None:
         runtime = int(time.time() - start_time)
@@ -518,7 +424,7 @@ async def info(ctx):
 
     embed = discord.Embed(title=f"hi {ctx.message.author.name}!!!! (Prefix: {prefix})", color=webhook_color)
     # embed.add_field(name="Current owner ID(s):", value=owners,inline=True)
-    embed.add_field(name="Current account:", value=main_username if main_cookie_valid else "Inactive (Update your cookie!)")
+    embed.add_field(name="Current account:", value=username if valid else "Inactive (Update your cookie!)")
     embed.add_field(name="Watching:", value=watching if watching else "No Items")
     embed.add_field(name="Watch speed:", value=watch_speed)
     embed.add_field(name="Runtime:", value=runtime)
@@ -528,40 +434,32 @@ async def info(ctx):
 
 # same as above omegalul
 @bot.command(name="i")
-@is_owner()
+@is_authorized()
 async def i(ctx):
     ctx.command = bot.get_command("info")
     await bot.invoke(ctx)
 
-
 #cookie command
 @bot.command()
-@is_owner()
+@is_authorized()
 async def cookie(ctx, new_cookie: str):
     
     async with httpx.AsyncClient() as client:
         headers = {"Cookie": f".ROBLOSECURITY={new_cookie}"}
-        response = await client.get(ROBLOX_API_URL, headers=headers)
+        res = await client.get("https://users.roblox.com/v1/users/authenticated", headers=headers)
 
-    if response.status_code == 200:
-        user_data = response.json()
-        username = user_data["name"]
-        user_id = user_data["id"]
+    if res.status_code == 200:
+        username = res.json()["name"]
+        user_id = res.json()["id"]
 
         
         avatar_api_url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={user_id}&size=420x420&format=Png&isCircular=false"
         async with httpx.AsyncClient() as client:
             avatar_response = await client.get(avatar_api_url)
-        avatar_data = avatar_response.json()
-        avatar_url = avatar_data["data"][0]["imageUrl"]
+        avatar_url = avatar_response.json()["data"][0]["imageUrl"]
 
-        
         settings = read_settings()
-
-        
-        settings[0]["cookie"] = new_cookie
-
-        
+        settings[0]["cookie"] = new_cookie    
         overwrite(settings)
         
         embed = discord.Embed(
@@ -573,11 +471,10 @@ async def cookie(ctx, new_cookie: str):
        
         embed.set_thumbnail(url=avatar_url)
 
-        
         await ctx.send(embed=embed)
 
         
-        if await restart_main_py():
+        if await restart_sniper():
             print("Bot restarted after updating the cookie.")
         else:
             print("Error while trying to restart the bot after updating the cookie.")
@@ -595,15 +492,11 @@ async def cookie(ctx, new_cookie: str):
 
 #token command
 @bot.command()  
-@is_owner()
+@is_authorized()
 async def token(ctx, new_token: str):
     
     settings = read_settings()
-
-    
     settings[0]["token"] = new_token
-
-    
     overwrite(settings)
 
     embed = discord.Embed(
@@ -614,14 +507,14 @@ async def token(ctx, new_token: str):
 
     await ctx.send(embed=embed)
 
-    if await restart_main_py():
+    if await restart_sniper():
             print("Bot restarted after updating the token.")
     else:
             print("Error while trying to restart the bot after updating the token.")
 
 # legacy watcher watch
 @bot.command()
-@is_owner()
+@is_authorized()
 async def focus(ctx, id: int, mp:int):
     print("Focusing on new item...")
     settings = read_settings()
@@ -630,45 +523,32 @@ async def focus(ctx, id: int, mp:int):
 
     overwrite(settings)
 
-    restart_main_py()
+    restart_sniper()
 
     await ctx.send(embed=discord.Embed(title=f"Now focusing on {get_itemname(id)} ({id}) with a max price of {mp}",description=None,color=webhook_color))
 
 # same as above omegalul
 @bot.command(name="f")
-@is_owner()
+@is_authorized()
 async def f(ctx):
     ctx.command = bot.get_command("focus")
     await bot.invoke(ctx)
 
 # legacy watcher watch (but with link :O)
 @bot.command()
-@is_owner()
+@is_authorized()
 async def focus_link(ctx, link: str, mp: int):
-    att1 = urlparse(link).path.split('/')[-2] 
-    att2 = urlparse(link).path.split('/')[-3] 
-    att3 = urlparse(link).path.split('/')[2]
-    id_from_link = None 
+    id_from_link = getidfromurl(link)
     embed_title = None
     embed_description = None
-
-    if att1.isdigit():
-        id_from_link = att1
-    elif att2.isdigit():
-        id_from_link = att2
-    elif att3.isdigit():
-        id_from_link = att3
     
     if id_from_link.isdigit():
         print("Adding new item...")
 
         settings = read_settings()
-        
         settings[1]["items"] = {str(id_from_link): mp}
-
         overwrite(settings)
-
-        restart_main_py()  
+        restart_sniper()  
 
         embed_title= f"Now focusing on {get_itemname(id_from_link)} ({id_from_link}) with a max price of {mp}"
         embed_description= None
@@ -683,21 +563,21 @@ async def focus_link(ctx, link: str, mp: int):
 
 # same as above omegalul
 @bot.command(name="link_focus")
-@is_owner()
+@is_authorized()
 async def link_focus(ctx):
     ctx.command = bot.get_command("focus_link")
     await bot.invoke(ctx)
 
 # same as above omegalul
 @bot.command(name="fl")
-@is_owner()
+@is_authorized()
 async def fl(ctx):
     ctx.command = bot.get_command("focus_link")
     await bot.invoke(ctx)
 
 # ladd item
 @bot.command()
-@is_owner()
+@is_authorized()
 async def add(ctx, id: str, mp: int):
     settings = read_settings()
 
@@ -715,7 +595,7 @@ async def add(ctx, id: str, mp: int):
 
         overwrite(settings)
 
-        if await restart_main_py():
+        if await restart_sniper():
             print("Bot restarted after updating watcher")
         else:
             print("Error while trying to restart the bot after updating watcher") 
@@ -726,28 +606,18 @@ async def add(ctx, id: str, mp: int):
 
 # same as above omegalul
 @bot.command(name="a")
-@is_owner()
+@is_authorized()
 async def a(ctx):
     ctx.command = bot.get_command("add")
     await bot.invoke(ctx)
 
 #add link
 @bot.command()
-@is_owner()
+@is_authorized()
 async def add_link(ctx, link: str, mp: int):
-    att1 = urlparse(link).path.split('/')[-2] 
-    att2 = urlparse(link).path.split('/')[-3] 
-    att3 = urlparse(link).path.split('/')[2]
-    id_from_link = None 
+    id_from_link = getidfromurl(link)
     settings = read_settings()
     items = settings[1]["items"]
-
-    if att1.isdigit():
-        id_from_link = att1
-    elif att2.isdigit():
-        id_from_link = att2
-    elif att3.isdigit():
-        id_from_link = att3
     
     if id_from_link.isdigit() and id_from_link != None:
         if id_from_link in items or int(id_from_link) in items:
@@ -760,7 +630,7 @@ async def add_link(ctx, link: str, mp: int):
         
         overwrite(settings)
 
-        if await restart_main_py():
+        if await restart_sniper():
             print("Bot restarted after updating watcher")
         else:
             print("Error while trying to restart the bot after updating watcher") 
@@ -771,13 +641,13 @@ async def add_link(ctx, link: str, mp: int):
 
 # same as above omegalul
 @bot.command(name="al")
-@is_owner()
+@is_authorized()
 async def al(ctx):
     ctx.command = bot.get_command("add_link")
     await bot.invoke(ctx)
 
 @bot.command()
-@is_owner()
+@is_authorized()
 async def maxprice(ctx, id: int, price: int):
     settings = read_settings()
 
@@ -790,19 +660,19 @@ async def maxprice(ctx, id: int, price: int):
         embed_title = "The provided item is not being watched!"
 
     embed = discord.Embed(title=embed_title,description=None,color=webhook_color)
-    restart_main_py()
+    restart_sniper()
 
     await ctx.send(embed=embed)
 
 # same as above omegalul
 @bot.command(name="mp")
-@is_owner()
+@is_authorized()
 async def mp(ctx):
     ctx.command = bot.get_command("maxprice")
     await bot.invoke(ctx)
 
 @bot.command()
-@is_owner()
+@is_authorized()
 async def remove(ctx, id: int):
     settings = read_settings()
 
@@ -815,34 +685,24 @@ async def remove(ctx, id: int):
         embed_title = "The provided item is not being watched!"
 
     embed = discord.Embed(title=embed_title,description=None,color=webhook_color)
-    restart_main_py()
+    restart_sniper()
 
     await ctx.send(embed=embed)
 
 # same as above omegalul
 @bot.command(name="r")
-@is_owner()
+@is_authorized()
 async def r(ctx):
     ctx.command = bot.get_command("remove")
     await bot.invoke(ctx)
 
 #add link
 @bot.command()
-@is_owner()
+@is_authorized()
 async def remove_link(ctx, link: str):
-    att1 = urlparse(link).path.split('/')[-2] 
-    att2 = urlparse(link).path.split('/')[-3] 
-    att3 = urlparse(link).path.split('/')[2]
-    id_from_link = None 
+    id_from_link = getidfromurl(link)
     settings = read_settings()
     items = settings[1]["items"]
-
-    if att1.isdigit():
-        id_from_link = att1
-    elif att2.isdigit():
-        id_from_link = att2
-    elif att3.isdigit():
-        id_from_link = att3
     
     if id_from_link.isdigit() and id_from_link != None:
         if id_from_link in items or int(id_from_link) in items:
@@ -853,7 +713,7 @@ async def remove_link(ctx, link: str):
 
             overwrite(settings)
 
-            if await restart_main_py():
+            if await restart_sniper():
                 print("Bot restarted after updating watcher")
             else:
                 print("Error while trying to restart the bot after updating watcher") 
@@ -866,10 +726,59 @@ async def remove_link(ctx, link: str):
 
 # same as above omegalul
 @bot.command(name="rl")
-@is_owner()
+@is_authorized()
 async def rl(ctx):
     ctx.command = bot.get_command("remove_link")
     await bot.invoke(ctx)
+
+# mslink
+@bot.command(pass_context = True)
+# @is_owner()
+async def mslink(ctx, *, link: str):
+    id_from_link = getidfromurl(link)
+    
+    if id_from_link.isdigit():
+        msg=f"""Either link will open Microsoft ROBLOX: 
+- https://enchoral.me/?placeid={id_from_link}
+- https://www.roblox.com/games/start?launchData=hichat&placeId={id_from_link} (may launch default roblox, set default to uwp if it does)"""
+    elif id_from_link == None or not id_from_link.isdigit():
+        msg=f"```Link format is invalid. / Value entered is not a link.```"
+
+    await ctx.reply(msg)
+
+# same as above omegalul
+@bot.command(name="msl", pass_context = True)
+# @is_owner()
+async def msl(ctx):
+    ctx.command = bot.get_command("mslink")
+    await bot.invoke(ctx)
+
+# same as above omegalul
+@bot.command(name="ms", pass_context = True)
+# @is_owner()
+async def ms(ctx):
+    ctx.command = bot.get_command("mslink")
+    await bot.invoke(ctx)
+
+# same as above omegalul
+@bot.command(name="uwp", pass_context = True)
+# @is_owner()
+async def uwp(ctx):
+    ctx.command = bot.get_command("mslink")
+    await bot.invoke(ctx)
+
+# id from link
+@bot.command(pass_context = True)
+# @is_owner()
+async def id(ctx, *, link: str):
+    id_from_link = getidfromurl(link)
+    
+    if id_from_link.isdigit():
+        msg=str(id_from_link)
+    elif id_from_link == None or not id_from_link.isdigit():
+        msg=f"```Link format is invalid. / Value entered is not a link.```"
+
+    await ctx.reply(msg)
     
 runningSession = subprocess.Popen([sys.executable, "main.py"])
 bot_token = settings[0]["token"]
