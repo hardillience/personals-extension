@@ -65,7 +65,7 @@ def get_product_id(id):
         if conn.status_code == 200:
             return  {
                 "id": data["ProductId"],
-                "creator": data["Creator"]["Id"]
+                "creator": data["Creator"]["Id"],
             }
         else:
             time.sleep(1)
@@ -91,6 +91,7 @@ def buy_item(product_id, seller_id, price):
         if conn.status_code == 200:
             if ("purchased" in data) and data["purchased"] == True:
                 logs.append(f"Bought {data['assetName']}")
+
         else:
             return buy_item(product_id, seller_id, price)
     except:
@@ -152,8 +153,9 @@ def watcher():
                                             }
                                           ]
                                     }
-                            with requests.session() as s:
-                                s.post(webhook, json=data)
+                            if f"Bought {name}" in logs:
+                                with requests.session() as s:
+                                    s.post(webhook, json=data)
             elif conn.status_code == 403:
                 logs.append('force refreshing auth token')
                 _set_auth()

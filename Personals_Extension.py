@@ -29,6 +29,16 @@ def getidfromurl(link):
     
     return val
 
+def linkable(value):
+    try:
+        val = getidfromurl(value)
+        if val == None:
+            return False
+        else:
+            return True
+    except IndexError:
+        return False
+
 #Load Settings
 with open('settings.json') as f:
     settings = json.load(f)
@@ -114,9 +124,7 @@ def overwrite(new_settings):
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
-        # embed = Embed(title="Error", description=" ```Only the owner can use such commands. ```", color=Colour.red())
-        # await ctx.send(embed=embed)
-        return
+        return await ctx.send(embed=Embed(title="You are not authorized to use this command!", description=None, color=Colour.red()))
 
 
 @bot.event
@@ -139,20 +147,15 @@ async def help(ctx):
     msg = """# COMMANDS LIST
 
 **ITEMS**
-!add / !a {item_id} {max_price} --- Add an item to watcher
-!add_link / !al {item_link} {max_price} --- Add an item using its link to watcher
-
-!remove / !r {item_id} --- Remove an item from watcher
-!remove_link/ !rl {item_link} {max_price} --- Remove an item using its link from watcher
-
-!focus / !f {item_id} {max_price} --- Removes all items and focuses on the specified item
-!focus_link / !link_focus / !fl --- Removes all items and focuses on the specified item using its link
-
-!maxprice / !mp {item_id} {new_max_price} --- Change an item's max price
+!add / !a {item_id / item_link} {max_price} --- Add an item to watcher
+!remove / !r {item_id / item_link} --- Remove an item from watcher
+!removeall --- Remove all items from watcher
+!focus / !f {item_id / item_link} {max_price} --- Removes all items and focuses on the specified item
+!maxprice / !mp {item_id / item_link} {new_max_price} --- Change an item's max price
 
 **BOT CONFIG**
 !token {bot_token} --- Change the bot token [idk if this works tbh lmao]
-!cookie {cookie} --- Change the ROBLOX cookie [idk if this also works lmfaoaoaoa]
+!cookie {cookie} --- Change the ROBLOX cookie [idk if this also works lmaoaoao]
 !speed {new_watch_speed} --- Change the watch speed to your desired value   
 
 !adduser / !au {user_id} --- Authorize a person to use your bot
@@ -161,7 +164,7 @@ async def help(ctx):
 
 **OTHERS**
 !watching / !w --- Returns a list of all the items you are currently watching.
-!info / !si --- Returns info about the prefix, current ROBLOX account being used, the watch speed, items being watched, and runtime."""
+!info / !i --- Returns info about the prefix, current ROBLOX account being used, the watch speed, items being watched, and runtime."""
     await ctx.author.send(msg)
     await ctx.reply(embed=Embed(title="A list of commands has been sent to your DMs!",description=None,color=webhook_color))
 
@@ -172,11 +175,7 @@ async def webhook(ctx, webhook_url: str):
     settings = read_settings()
     settings[0]["webhook"] = webhook_url
     overwrite(settings)
-    embed = discord.Embed(
-        title=f"Webhook has been updated successfully!",
-        description=None,
-        color=webhook_color
-    )
+    embed = Embed(title=f"Webhook has been updated successfully!",description=None,color=webhook_color)
     embed_dict = embed.to_dict()
     async with aiohttp.ClientSession() as s:
         async with s.post(
@@ -220,7 +219,7 @@ async def speed(ctx, new_speed: str):
 
     settings[0]["watch_speed"] = newest
     overwrite(settings)
-    await ctx.send(embed=discord.Embed(title=f"Watch speed changed to {str(newest)}.",description=None, color=webhook_color))
+    await ctx.send(embed=Embed(title=f"Watch speed changed to {str(newest)}.",description=None, color=webhook_color))
 
     if await restart_sniper():
             print("Watch speed updated; restarted successfully.")
@@ -259,7 +258,7 @@ async def watching(ctx):
             for item_data in item["data"]:
                print(item["data"])
                if checkvariable(item_data, "price"):
-                    embedToAdd =  discord.Embed(
+                    embedToAdd =  Embed(
                         title=f'Watching: {item_data["name"]}',
                         url=f"https://www.roblox.com/catalog/{str(item_data['id'])}/",
                         color=webhook_color,
@@ -269,7 +268,7 @@ async def watching(ctx):
                     embedToAdd.set_thumbnail(url=get_thumbnail(str(item_data['id'])))
                     listOfEmbeds.append(embedToAdd)
                else:
-                    embedToAdd =  discord.Embed(
+                    embedToAdd =  Embed(
                         title=f'Watching: {item_data["name"]}',
                         url=f"https://www.roblox.com/catalog/{str(item_data['id'])}/",
                         color=webhook_color,
@@ -280,7 +279,7 @@ async def watching(ctx):
                     listOfEmbeds.append(embedToAdd)
 
             if len(listOfEmbeds) == 0:
-                listOfEmbeds.append(discord.Embed(
+                listOfEmbeds.append(Embed(
                     title="Error!",
                     description="No items are currently being watched!",
                     color=webhook_color,
@@ -317,9 +316,9 @@ async def adduser(ctx, user_id: int):
         
         overwrite(settings)
         
-        await ctx.send(embed=discord.Embed(title="User added!",description=f"<@{user_id}> ({user_id}) can now use your bot!",color=webhook_color))
+        await ctx.send(embed=Embed(title="User added!",description=f"<@{user_id}> ({user_id}) can now use your bot!",color=webhook_color))
     else:
-        await ctx.send(embed=discord.Embed(title="User input already authorized!",description=f"<@{user_id}> ({user_id}) is already an authorized user!", color=webhook_color))
+        await ctx.send(embed=Embed(title="User input already authorized!",description=f"<@{user_id}> ({user_id}) is already an authorized user!", color=webhook_color))
 
 # same as above omegalul
 @bot.command(name="au")
@@ -342,10 +341,10 @@ async def removeuser(ctx, user_id: int):
         settings[0]["authorized"] = authorized_ids
         overwrite(settings)
 
-        embed = discord.Embed(title="User removed!",description=f"<@{user_id}> ({user_id}) can no longer use your bot!",color=webhook_color)
+        embed = Embed(title="User removed!",description=f"<@{user_id}> ({user_id}) can no longer use your bot!",color=webhook_color)
         await ctx.send(embed=embed)
     else:
-        embed = discord.Embed(title="User input unauthorized!",description=f"<@{user_id}> ({user_id}) is not an authorized user!",color=webhook_color)
+        embed = Embed(title="User input unauthorized!",description=f"<@{user_id}> ({user_id}) is not an authorized user!",color=webhook_color)
         await ctx.send(embed=embed)
 
 # same as above omegalul
@@ -366,7 +365,7 @@ async def authorized(ctx):
     for ownerid in authorized_ids:
         owners_str = owners_str + f"<@{ownerid}>  ({ownerid})\n"
     
-    embed = discord.Embed(title="Authorized Users",description=owners_str,color=webhook_color)
+    embed = Embed(title="Authorized Users",description=owners_str,color=webhook_color)
 
     await ctx.send(embed=embed)
 
@@ -376,11 +375,9 @@ async def authorized(ctx):
 async def restart(ctx):
     try:
         restart_sniper()
-        embed = Embed(title="Success!", description="Successfully restarted the bot.", color=Colour.from_rgb(255, 182, 193))
-        await ctx.send(embed=embed)
+        await ctx.send(embed=Embed(title="Successfully restarted the bot.", description=None, color=webhook_color))
     except Exception as e:
-        embed = Embed(title="Error", description="An error occurred while trying to restart the bot: {}".format(str(e)), color=Colour.red())
-        await ctx.send(embed=embed)
+        await ctx.send(embed=Embed(title="An error occurred while trying to restart the bot: {}".format(str(e)), description=None, color=Colour.red()))
 
 #More command
 @bot.command(pass_context = True)
@@ -388,28 +385,13 @@ async def restart(ctx):
 async def info(ctx):
     settings = read_settings()
 
-    
     cookie = settings[0]["cookie"]
     watch_speed = settings[0]["watch_speed"]
     # owners = settings[0]["authorized"]
-    prefix = bot.command_prefix
     items = settings[1]["items"]
     watching = ', '.join(str(item) for item in items)
 
     valid, username = await check(cookie)
-
-    async with httpx.AsyncClient() as client:
-        headers = {"Cookie": f".ROBLOSECURITY={cookie}"}
-        res = await client.get("https://users.roblox.com/v1/users/authenticated", headers=headers)
-
-    if res.status_code == 200:
-        user_id = res.json()["id"]
-
-        
-        avatar_api_url = f"https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={user_id}&size=420x420&format=Png&isCircular=false"
-        async with httpx.AsyncClient() as client:
-            avatar_response = await client.get(avatar_api_url)
-        thumbnail_url = avatar_response.json()["data"][0]["imageUrl"]
 
     if start_time is not None:
         runtime = int(time.time() - start_time)
@@ -421,15 +403,25 @@ async def info(ctx):
     else:
         runtime = "Unknown"
 
+    async with httpx.AsyncClient() as c:
+        res = await c.get("https://users.roblox.com/v1/users/authenticated", headers={"Cookie": f".ROBLOSECURITY={cookie}"})
 
-    embed = discord.Embed(title=f"hi {ctx.message.author.name}!!!! (Prefix: {prefix})", color=webhook_color)
+    if res.status_code == 200:
+        user_id = res.json()["id"]
+
+        img_api = f"https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={user_id}&size=420x420&format=Png&isCircular=false"
+        async with httpx.AsyncClient() as c:
+            other_res = await c.get(img_api)
+        img = other_res.json()["data"][0]["imageUrl"]
+
+    embed = Embed(title=f"hi {ctx.message.author.name}!!!! (Prefix: {bot.command_prefix})", description=None, color=webhook_color)
     # embed.add_field(name="Current owner ID(s):", value=owners,inline=True)
     embed.add_field(name="Current account:", value=username if valid else "Inactive (Update your cookie!)")
     embed.add_field(name="Watching:", value=watching if watching else "No Items")
     embed.add_field(name="Watch speed:", value=watch_speed)
     embed.add_field(name="Runtime:", value=runtime)
     embed.set_footer(text="hardish's extension for frames' personals sniper lol")
-    embed.set_thumbnail(url=thumbnail_url)
+    embed.set_thumbnail(url=img)
     await ctx.reply(embed=embed)
 
 # same as above omegalul
@@ -442,53 +434,37 @@ async def i(ctx):
 #cookie command
 @bot.command()
 @is_authorized()
-async def cookie(ctx, new_cookie: str):
+async def cookie(ctx, cookie: str):
     
-    async with httpx.AsyncClient() as client:
-        headers = {"Cookie": f".ROBLOSECURITY={new_cookie}"}
-        res = await client.get("https://users.roblox.com/v1/users/authenticated", headers=headers)
+    async with httpx.AsyncClient() as c:
+        res = await c.get("https://users.roblox.com/v1/users/authenticated", headers={"Cookie": f".ROBLOSECURITY={cookie}"})
 
     if res.status_code == 200:
         username = res.json()["name"]
         user_id = res.json()["id"]
 
         
-        avatar_api_url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={user_id}&size=420x420&format=Png&isCircular=false"
-        async with httpx.AsyncClient() as client:
-            avatar_response = await client.get(avatar_api_url)
-        avatar_url = avatar_response.json()["data"][0]["imageUrl"]
+        img_api = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={user_id}&size=420x420&format=Png&isCircular=false"
+        async with httpx.AsyncClient() as c:
+            other_res = await c.get(img_api)
+        img = other_res.json()["data"][0]["imageUrl"]
 
         settings = read_settings()
-        settings[0]["cookie"] = new_cookie    
+        settings[0]["cookie"] = cookie    
         overwrite(settings)
         
-        embed = discord.Embed(
-            title="Cookie changed!",
-            description=f"Registered new cookie as: {username}",
-            color=webhook_color
-        )
-
-       
-        embed.set_thumbnail(url=avatar_url)
+        embed = Embed(title=f"Cookie changed to {username} successfully!",description=None,color=webhook_color)
+        embed.set_thumbnail(url=img)
 
         await ctx.send(embed=embed)
 
-        
         if await restart_sniper():
             print("Bot restarted after updating the cookie.")
         else:
             print("Error while trying to restart the bot after updating the cookie.")
 
     else:
-        
-        embed = discord.Embed(
-            title="Error",
-            description=" ```The cookie you have input was invalid. ```",
-            color=discord.Color.red()
-        )
-
-        
-        await ctx.send(embed=embed)
+        await ctx.send(embed=Embed(title="Provided cookie is invalid.",description=None,color=discord.Color.red()))
 
 #token command
 @bot.command()  
@@ -499,11 +475,7 @@ async def token(ctx, new_token: str):
     settings[0]["token"] = new_token
     overwrite(settings)
 
-    embed = discord.Embed(
-        title="Token Update",
-        description="Successfully changed discord bot token!",
-        color=webhook_color
-    )
+    embed = Embed(title="Updated discord bot token successfully!",description=None,color=webhook_color)
 
     await ctx.send(embed=embed)
 
@@ -512,20 +484,43 @@ async def token(ctx, new_token: str):
     else:
             print("Error while trying to restart the bot after updating the token.")
 
-# legacy watcher watch
+# focus command
 @bot.command()
 @is_authorized()
-async def focus(ctx, id: int, mp:int):
-    print("Focusing on new item...")
-    settings = read_settings()
+async def focus(ctx, item: str, mp=None):
+    try:
+        if mp != None:
+            int(mp)
+    except ValueError:
+        mp = None
 
-    settings[1]["items"] = {str(id): mp}
+    if not item.isdigit() and linkable(item) == True:
+        id = getidfromurl(item)
+    elif linkable(item) == False and item.isdigit():
+        id = item
+    elif linkable(item) == False and not item.isdigit():
+        id = None
+    
+    embed_title = None
+    
+    if id != None and id.isdigit():
+        if mp == None or not str(mp).isdigit():
+            return await ctx.send(embed=Embed(title="You must specify an integer max price!",description=None, color=webhook_color))
+        print("Adding new item...")
 
-    overwrite(settings)
+        settings = read_settings()
+        settings[1]["items"] = {str(id): int(mp)}
+        overwrite(settings)
+        restart_sniper()  
 
-    restart_sniper()
+        embed_title= f"Now focusing on {get_itemname(id)} ({id}) with a max price of {mp}"
+    else:
+        embed_title="You have not entered a valid ID or link!"
 
-    await ctx.send(embed=discord.Embed(title=f"Now focusing on {get_itemname(id)} ({id}) with a max price of {mp}",description=None,color=webhook_color))
+    e = Embed(title=embed_title, description=None, color=webhook_color)
+    e.set_footer(text="hardish's extension for frames' personals sniper")
+
+    await ctx.send(embed=e)
 
 # same as above omegalul
 @bot.command(name="f")
@@ -534,75 +529,46 @@ async def f(ctx):
     ctx.command = bot.get_command("focus")
     await bot.invoke(ctx)
 
-# legacy watcher watch (but with link :O)
+# add item command
 @bot.command()
 @is_authorized()
-async def focus_link(ctx, link: str, mp: int):
-    id_from_link = getidfromurl(link)
-    embed_title = None
-    embed_description = None
-    
-    if id_from_link.isdigit():
-        print("Adding new item...")
+async def add(ctx, item: str, mp=None):
+    try:
+        if mp != None:
+            int(mp)
+    except ValueError:
+        mp = None
 
-        settings = read_settings()
-        settings[1]["items"] = {str(id_from_link): mp}
-        overwrite(settings)
-        restart_sniper()  
+    if not item.isdigit() and linkable(item) == True:
+        id = getidfromurl(item)
+    elif linkable(item) == False and item.isdigit():
+        id = item
+    elif linkable(item) == False and not item.isdigit():
+        id = None
 
-        embed_title= f"Now focusing on {get_itemname(id_from_link)} ({id_from_link}) with a max price of {mp}"
-        embed_description= None
-    elif id_from_link == None or not id_from_link.isdigit():
-        embed_description= None
-        embed_title= f"Link format is invalid. / Value entered is not a link."
-        
-
-    embed = discord.Embed(title=embed_title, description=embed_description, color=webhook_color)   
-
-    await ctx.send(embed=embed)
-
-# same as above omegalul
-@bot.command(name="link_focus")
-@is_authorized()
-async def link_focus(ctx):
-    ctx.command = bot.get_command("focus_link")
-    await bot.invoke(ctx)
-
-# same as above omegalul
-@bot.command(name="fl")
-@is_authorized()
-async def fl(ctx):
-    ctx.command = bot.get_command("focus_link")
-    await bot.invoke(ctx)
-
-# ladd item
-@bot.command()
-@is_authorized()
-async def add(ctx, id: str, mp: int):
     settings = read_settings()
-
     items = settings[1]["items"]
+    embed_title = None
     
-    if id.isdigit() and id != None:
-        if id in items:
-            await ctx.send(embed=discord.Embed(title=f"{get_itemname(int(id))} ({id}) is already being watched!",description=None,color=webhook_color))
-        else:           
-            print("Adding new item...")
-            items[id] = mp   
-
-            embed_title=f"{get_itemname(id)} ({id}) of max price {(mp)} has been added."
-            await ctx.send (embed=discord.Embed(title=embed_title, description=None, color=webhook_color))  
-
-        overwrite(settings)
-
-        if await restart_sniper():
-            print("Bot restarted after updating watcher")
+    if id != None and id.isdigit():
+        if mp == None or not str(mp).isdigit():
+            return await ctx.send(embed=Embed(title="You must specify an integer max price!",description=None, color=webhook_color))
         else:
-            print("Error while trying to restart the bot after updating watcher") 
+            if id in items:
+                return await ctx.send(embed=Embed(title=f"{get_itemname(id)} ({id}) is already being watched!",description=None,color=webhook_color))
+            else:           
+                print("Adding new item...")
+                items[id] = int(mp)   
+                overwrite(settings)
+                restart_sniper()
+
+                embed_title=f"{get_itemname(id)} ({id}) of max price {(mp)} has been added."
     else:
-        embed_description=None
-        embed_title=f"Provided item ID is not an integer"
-        await ctx.send (embed=discord.Embed(title=embed_title, description=embed_description, color=webhook_color)) 
+        embed_title= f"You have not entered a valid link or ID!"
+
+    e = Embed(title=embed_title, description=None, color=webhook_color)
+    e.set_footer(text="hardish's extension for frames' personals sniper")
+    await ctx.send(embed=e)
 
 # same as above omegalul
 @bot.command(name="a")
@@ -611,58 +577,46 @@ async def a(ctx):
     ctx.command = bot.get_command("add")
     await bot.invoke(ctx)
 
-#add link
+# max price command
 @bot.command()
 @is_authorized()
-async def add_link(ctx, link: str, mp: int):
-    id_from_link = getidfromurl(link)
+async def maxprice(ctx, item: str, mp=None):
+    try:
+        if mp != None:
+            int(mp)
+    except ValueError:
+        mp = None
+
+    if not item.isdigit() and linkable(item) == True:
+        id = getidfromurl(item)
+    elif linkable(item) == False and item.isdigit():
+        id = item
+    elif linkable(item) == False and not item.isdigit():
+        id = None
+
     settings = read_settings()
     items = settings[1]["items"]
+    embed_title = None
     
-    if id_from_link.isdigit() and id_from_link != None:
-        if id_from_link in items or int(id_from_link) in items:
-            await ctx.send(embed=discord.Embed(title=f"Item ID {id_from_link} is already being watched.",description=None,color=webhook_color))
-        else:           
-            print("Adding legacy id")        
-            items[str(id_from_link)] = mp       
-            embed_title=f"{get_itemname(int(id_from_link))} ({id_from_link}) of max price {(mp)} has been added."
-            await ctx.send (embed=discord.Embed(title=embed_title, description=None, color=webhook_color))  
-        
-        overwrite(settings)
-
-        if await restart_sniper():
-            print("Bot restarted after updating watcher")
+    if id != None and id.isdigit():
+        if mp == None or not str(mp).isdigit():
+            return await ctx.send(embed=Embed(title="You must specify an integer max price!",description=None, color=webhook_color))
         else:
-            print("Error while trying to restart the bot after updating watcher") 
+            if id in items:
+                print("Changing max price of an item...")
+                items[id] = int(mp)   
+                overwrite(settings)
+                restart_sniper()
+
+                embed_title=f"{get_itemname(id)} ({id})'s max price has been changed to {(mp)}."
+            else:      
+                return await ctx.send(embed=Embed(title=f"{get_itemname(id)} ({id}) is not being watched!",description=None,color=webhook_color))     
     else:
-        embed_description= None
-        embed_title= f"Link format is invalid. / Value entered is not a link."
-        await ctx.send (embed=discord.Embed(title=embed_title, description=embed_description, color=webhook_color)) 
+        embed_title= f"You have not entered a valid link or ID!"
 
-# same as above omegalul
-@bot.command(name="al")
-@is_authorized()
-async def al(ctx):
-    ctx.command = bot.get_command("add_link")
-    await bot.invoke(ctx)
-
-@bot.command()
-@is_authorized()
-async def maxprice(ctx, id: int, price: int):
-    settings = read_settings()
-
-    items = settings[1]["items"]
-    if str(id) in items:
-        items[str(id)] = price
-        overwrite(settings)
-        embed_title = f"{get_itemname(int(id))} ({id})'s maximum price has been changed to {price}."
-    else:
-        embed_title = "The provided item is not being watched!"
-
-    embed = discord.Embed(title=embed_title,description=None,color=webhook_color)
-    restart_sniper()
-
-    await ctx.send(embed=embed)
+    e = Embed(title=embed_title, description=None, color=webhook_color)
+    e.set_footer(text="hardish's extension for frames' personals sniper")
+    await ctx.send(embed=e)
 
 # same as above omegalul
 @bot.command(name="mp")
@@ -671,23 +625,37 @@ async def mp(ctx):
     ctx.command = bot.get_command("maxprice")
     await bot.invoke(ctx)
 
+# max price command
 @bot.command()
 @is_authorized()
-async def remove(ctx, id: int):
+async def remove(ctx, item: str):
+    if not item.isdigit() and linkable(item) == True:
+        id = getidfromurl(item)
+    elif linkable(item) == False and item.isdigit():
+        id = item
+    elif linkable(item) == False and not item.isdigit():
+        id = None
+
     settings = read_settings()
-
     items = settings[1]["items"]
-    if str(id) in items:
-        items.pop(str(id))
-        overwrite(settings)
-        embed_title = f"{get_itemname(int(id))} ({id}) has been removed."
+    embed_title = None
+    
+    if id != None and id.isdigit():
+        if id in items:
+            print("Removing an item...")
+            items.pop(str(id))  
+            overwrite(settings)
+            restart_sniper()
+
+            embed_title = f"{get_itemname(int(id))} ({id}) has been removed."
+        else:      
+            return await ctx.send(embed=Embed(title=f"{get_itemname(id)} ({id}) is not being watched!",description=None,color=webhook_color))     
     else:
-        embed_title = "The provided item is not being watched!"
+        embed_title= f"You have not entered a valid link or ID!"
 
-    embed = discord.Embed(title=embed_title,description=None,color=webhook_color)
-    restart_sniper()
-
-    await ctx.send(embed=embed)
+    e = Embed(title=embed_title, description=None, color=webhook_color)
+    e.set_footer(text="hardish's extension for frames' personals sniper")
+    await ctx.send(embed=e)
 
 # same as above omegalul
 @bot.command(name="r")
@@ -696,39 +664,24 @@ async def r(ctx):
     ctx.command = bot.get_command("remove")
     await bot.invoke(ctx)
 
-#add link
+# removeall command
 @bot.command()
 @is_authorized()
-async def remove_link(ctx, link: str):
-    id_from_link = getidfromurl(link)
+async def removeall(ctx):
     settings = read_settings()
-    items = settings[1]["items"]
-    
-    if id_from_link.isdigit() and id_from_link != None:
-        if id_from_link in items or int(id_from_link) in items:
-            print("Adding new ID...")        
-            items.pop(str(id_from_link))       
-            embed_title=f"{get_itemname(int(id_from_link))} ({id_from_link}) has been removed."
-            await ctx.send (embed=discord.Embed(title=embed_title, description=None, color=webhook_color))  
+    settings[1]["items"] = {}
+    overwrite(settings)
+    restart_sniper()
 
-            overwrite(settings)
-
-            if await restart_sniper():
-                print("Bot restarted after updating watcher")
-            else:
-                print("Error while trying to restart the bot after updating watcher") 
-        else:           
-            await ctx.send(embed=discord.Embed(title=f"Item ID {id_from_link} is not being watched!",description=None,color=webhook_color))
-    else:
-        embed_description= None
-        embed_title= f"Link format is invalid. / Value entered is not a link."
-        await ctx.send (embed=discord.Embed(title=embed_title, description=embed_description, color=webhook_color)) 
+    e = Embed(title="Removed all items successfully!", description=None, color=webhook_color)
+    e.set_footer(text="hardish's extension for frames' personals sniper")
+    await ctx.send(embed=e)
 
 # same as above omegalul
-@bot.command(name="rl")
+@bot.command(name="ra")
 @is_authorized()
-async def rl(ctx):
-    ctx.command = bot.get_command("remove_link")
+async def ra(ctx):
+    ctx.command = bot.get_command("removeall")
     await bot.invoke(ctx)
 
 # mslink
@@ -742,7 +695,7 @@ async def mslink(ctx, *, link: str):
 - https://enchoral.me/?placeid={id_from_link}
 - https://www.roblox.com/games/start?launchData=hichat&placeId={id_from_link} (may launch default roblox, set default to uwp if it does)"""
     elif id_from_link == None or not id_from_link.isdigit():
-        msg=f"```Link format is invalid. / Value entered is not a link.```"
+        msg=f"Link format is invalid. / Value entered is not a link."
 
     await ctx.reply(msg)
 
@@ -776,7 +729,7 @@ async def id(ctx, *, link: str):
     if id_from_link.isdigit():
         msg=str(id_from_link)
     elif id_from_link == None or not id_from_link.isdigit():
-        msg=f"```Link format is invalid. / Value entered is not a link.```"
+        msg=f"Link format is invalid. / Value entered is not a link."
 
     await ctx.reply(msg)
     
