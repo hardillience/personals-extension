@@ -65,7 +65,7 @@ def get_product_id(id):
         if conn.status_code == 200:
             return  {
                 "id": data["ProductId"],
-                "creator": data["Creator"]["Id"],
+                "creator": data["Creator"]["Id"]
             }
         else:
             time.sleep(1)
