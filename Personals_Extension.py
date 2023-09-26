@@ -1,11 +1,11 @@
-import pip 
+import pip, os, sys
 try:
-    import discord, json, aiohttp, httpx, os, time, subprocess, sys, requests, psutil, signal
+    import discord, json, aiohttp, httpx, time, subprocess, requests, psutil, signal
     from discord.ext import commands
     from discord import Embed, Colour
     from urllib.parse import urlparse
 except ModuleNotFoundError:
-    os.system('pip install requests psutil discord.py aiohttp')
+    os.system('pip install requests psutil discord.py aiohttp httpx')
     os.execv(sys.executable, [sys.executable] + [sys.argv[0]] + sys.argv[1:])
 
 def get_thumbnail(item_id) -> str:
