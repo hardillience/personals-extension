@@ -1,6 +1,5 @@
-import pip, os, sys
 try:
-    import discord, json, aiohttp, httpx, time, subprocess, requests, psutil, signal
+    import discord, json, aiohttp, httpx, time, subprocess, requests, psutil, signal, os, sys
     from discord.ext import commands
     from discord import Embed, Colour
     from urllib.parse import urlparse
@@ -684,54 +683,6 @@ async def ra(ctx):
     ctx.command = bot.get_command("removeall")
     await bot.invoke(ctx)
 
-# mslink
-@bot.command(pass_context = True)
-# @is_owner()
-async def mslink(ctx, *, link: str):
-    id_from_link = getidfromurl(link)
-    
-    if id_from_link.isdigit():
-        msg=f"""Either link will open Microsoft ROBLOX: 
-- https://enchoral.me/?placeid={id_from_link}
-- https://www.roblox.com/games/start?launchData=hichat&placeId={id_from_link} (may launch default roblox, set default to uwp if it does)"""
-    elif id_from_link == None or not id_from_link.isdigit():
-        msg=f"Link format is invalid. / Value entered is not a link."
-
-    await ctx.reply(msg)
-
-# same as above omegalul
-@bot.command(name="msl", pass_context = True)
-# @is_owner()
-async def msl(ctx):
-    ctx.command = bot.get_command("mslink")
-    await bot.invoke(ctx)
-
-# same as above omegalul
-@bot.command(name="ms", pass_context = True)
-# @is_owner()
-async def ms(ctx):
-    ctx.command = bot.get_command("mslink")
-    await bot.invoke(ctx)
-
-# same as above omegalul
-@bot.command(name="uwp", pass_context = True)
-# @is_owner()
-async def uwp(ctx):
-    ctx.command = bot.get_command("mslink")
-    await bot.invoke(ctx)
-
-# id from link
-@bot.command(pass_context = True)
-# @is_owner()
-async def id(ctx, *, link: str):
-    id_from_link = getidfromurl(link)
-    
-    if id_from_link.isdigit():
-        msg=str(id_from_link)
-    elif id_from_link == None or not id_from_link.isdigit():
-        msg=f"Link format is invalid. / Value entered is not a link."
-
-    await ctx.reply(msg)
     
 runningSession = subprocess.Popen([sys.executable, "main.py"])
 bot_token = settings[0]["token"]
