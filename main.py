@@ -74,10 +74,23 @@ def get_product_id(id):
         time.sleep(1)
         return get_product_id(id)
 
-def buy_item(product_id, seller_id, price):
+def buy_item(product_id, seller_id, price, actual_item_id):
     global logs
 
     try:
+
+        authorized = settings[0]["authorized"]
+        ping_string = ""
+        for x in authorized:
+            ping_string = ping_string + f"<@{x}>"
+        info = webhook_info(int(actual_item_id))
+        name = info["name"]
+        purchaser = info["purchaser"]
+        price = info["price"]
+        creator = info["creator"]
+        img = info["img"]
+        itemUrl = info["itemUrl"]
+        authorized = settings[0]["authorized"]
         body = {
             "expectedCurrency": 1,
             "expectedPrice": price,
@@ -91,11 +104,31 @@ def buy_item(product_id, seller_id, price):
         if conn.status_code == 200:
             if ("purchased" in data) and data["purchased"] == True:
                 logs.append(f"Bought {data['assetName']}")
+                webhook_data = {
+                    "content": ping_string,
+                    "embeds": [
+                                {
+                                    "title": f"{purchaser} bought {name}",
+                                    "description": f"Price: `{price}`\nCreator: `{creator}`",
+                                    "url": itemUrl,
+                                    "color": 16234703,
+                                    "thumbnail": {
+                                        "url": img
+                                    },
+                                    "footer": {
+                                                "text": "frames personals sniper",
+                                                "icon_url": "https://cdn.discordapp.com/attachments/1152278211317731448/1152305921872109648/vlqrp6dkh88nlptlbs43o7nfgg-39571d408b0354614327b0eee935167f.png"
+                                            }
+                                    }
+                                ]
+                            }
+                with requests.session() as s:
+                    s.post(webhook, json=webhook_data)
 
         else:
-            return buy_item(product_id, seller_id, price)
+            return buy_item(product_id, seller_id, price, actual_item_id)
     except:
-        return buy_item(product_id, seller_id, price)
+        return buy_item(product_id, seller_id, price, actual_item_id)
 
 def status_update():
     global checks, logs
@@ -128,34 +161,7 @@ def watcher():
                             cache.append(item["id"])
                             r_data = get_product_id(item["id"])
                             logs.append("Buying item")
-                            buy_item(r_data["id"], r_data["creator"], item["price"])
-                            info = webhook_info(int(item["id"]))
-                            name = info["name"]
-                            purchaser = info["purchaser"]
-                            price = info["price"]
-                            creator = info["creator"]
-                            img = info["img"]
-                            itemUrl = info["itemUrl"]
-                            data = {
-                                "embeds": [
-                                            {
-                                                "title": f"{purchaser} bought {name}",
-                                                "description": f"Price: `{price}`\nCreator: `{creator}`",
-                                                "url": itemUrl,
-                                                "color": 16234703,
-                                                "thumbnail": {
-                                                    "url": img
-                                                },
-                                                "footer": {
-                                                    "text": "frames personals sniper",
-                                                    "icon_url": "https://cdn.discordapp.com/attachments/1152278211317731448/1152305921872109648/vlqrp6dkh88nlptlbs43o7nfgg-39571d408b0354614327b0eee935167f.png"
-                                                }
-                                            }
-                                          ]
-                                    }
-                            if f"Bought {name}" in logs:
-                                with requests.session() as s:
-                                    s.post(webhook, json=data)
+                            buy_item(r_data["id"], r_data["creator"], item["price"], item["id"])
             elif conn.status_code == 403:
                 logs.append('force refreshing auth token')
                 _set_auth()
