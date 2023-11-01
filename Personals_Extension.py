@@ -167,7 +167,7 @@ async def help(ctx):
     await ctx.author.send(msg)
     await ctx.reply(embed=Embed(title="A list of commands has been sent to your DMs!",description=None,color=webhook_color))
 
-#webhook command
+# webhook cmd
 @bot.command() 
 @is_authorized()
 async def webhook(ctx, webhook_url: str):
@@ -194,7 +194,7 @@ async def webhook(ctx, webhook_url: str):
             else:
                print("Webhook updated; error encountered while restarted.")
 
-#ping
+# ping
 @bot.command()
 async def ping(ctx):
     message = f"Pong! {round(bot.latency * 1000)}ms"
@@ -226,9 +226,9 @@ async def speed(ctx, new_speed: str):
             print("Watch speed updated; restarted successfully.")
 
 # view all watching items
-@bot.command(name="watching")
+@bot.command(aliases=["watching","w"])
 @is_authorized()
-async def watching(ctx):
+async def watching_cmd(ctx):
     settings = read_settings()
     watchlist = settings[1]["items"]
     speed = settings[0]["watch_speed"]
@@ -294,17 +294,10 @@ async def watching(ctx):
         )
         await ctx.send(embed=embed)
 
-# same as above omegalul
-@bot.command(name="w")
+# add owner
+@bot.command(aliases=["adduser","au"])
 @is_authorized()
-async def w(ctx):
-    ctx.command = bot.get_command("watching")
-    await bot.invoke(ctx)
-
-#add owner
-@bot.command()
-@is_authorized()
-async def adduser(ctx, user_id: int):
+async def add_authorized_user(ctx, user_id: int):
     settings = read_settings()
     
     authorized_ids = settings[0]["authorized"]
@@ -318,18 +311,11 @@ async def adduser(ctx, user_id: int):
         await ctx.send(embed=Embed(title="User added!",description=f"<@{user_id}> ({user_id}) can now use your bot!",color=webhook_color))
     else:
         await ctx.send(embed=Embed(title="User input already authorized!",description=f"<@{user_id}> ({user_id}) is already an authorized user!", color=webhook_color))
-
-# same as above omegalul
-@bot.command(name="au")
+        
+# remove owner
+@bot.command(aliases=["removeuser","ru"])
 @is_authorized()
-async def au(ctx):
-    ctx.command = bot.get_command("adduser")
-    await bot.invoke(ctx)
-
-#remove owner
-@bot.command()
-@is_authorized()
-async def removeuser(ctx, user_id: int):
+async def remove_authorized_user(ctx, user_id: int):
     settings = read_settings()
         
     authorized_ids = settings[0]["authorized"]
@@ -345,15 +331,8 @@ async def removeuser(ctx, user_id: int):
     else:
         embed = Embed(title="User input unauthorized!",description=f"<@{user_id}> ({user_id}) is not an authorized user!",color=webhook_color)
         await ctx.send(embed=embed)
-
-# same as above omegalul
-@bot.command(name="ru")
-@is_authorized()
-async def ru(ctx):
-    ctx.command = bot.get_command("removeuser")
-    await bot.invoke(ctx)
-
-#owners
+        
+# owners
 @bot.command()
 @is_authorized()
 async def authorized(ctx):
@@ -368,7 +347,7 @@ async def authorized(ctx):
 
     await ctx.send(embed=embed)
 
-#restart command
+# restart command
 @bot.command()
 @is_authorized()
 async def restart(ctx):
@@ -378,10 +357,10 @@ async def restart(ctx):
     except Exception as e:
         await ctx.send(embed=Embed(title="An error occurred while trying to restart the bot: {}".format(str(e)), description=None, color=Colour.red()))
 
-#More command
-@bot.command(pass_context = True)
+# info command
+@bot.command(aliases=["info","i"], pass_context = True)
 @is_authorized()
-async def info(ctx):
+async def info_cmd(ctx):
     settings = read_settings()
 
     cookie = settings[0]["cookie"]
@@ -423,14 +402,7 @@ async def info(ctx):
     embed.set_thumbnail(url=img)
     await ctx.reply(embed=embed)
 
-# same as above omegalul
-@bot.command(name="i")
-@is_authorized()
-async def i(ctx):
-    ctx.command = bot.get_command("info")
-    await bot.invoke(ctx)
-
-#cookie command
+# cookie command
 @bot.command()
 @is_authorized()
 async def cookie(ctx, cookie: str):
@@ -465,7 +437,7 @@ async def cookie(ctx, cookie: str):
     else:
         await ctx.send(embed=Embed(title="Provided cookie is invalid.",description=None,color=discord.Color.red()))
 
-#token command
+# token command
 @bot.command()  
 @is_authorized()
 async def token(ctx, new_token: str):
@@ -484,9 +456,9 @@ async def token(ctx, new_token: str):
             print("Error while trying to restart the bot after updating the token.")
 
 # focus command
-@bot.command()
+@bot.command(aliases=["focus","f"])
 @is_authorized()
-async def focus(ctx, item: str, mp=None):
+async def focus_on_item(ctx, item: str, mp=None):
     try:
         if mp != None:
             int(mp)
@@ -521,17 +493,10 @@ async def focus(ctx, item: str, mp=None):
 
     await ctx.send(embed=e)
 
-# same as above omegalul
-@bot.command(name="f")
-@is_authorized()
-async def f(ctx):
-    ctx.command = bot.get_command("focus")
-    await bot.invoke(ctx)
-
 # add item command
-@bot.command()
+@bot.command(aliases=["add","a"])
 @is_authorized()
-async def add(ctx, item: str, mp=None):
+async def add_item(ctx, item: str, mp=None):
     try:
         if mp != None:
             int(mp)
@@ -569,17 +534,10 @@ async def add(ctx, item: str, mp=None):
     e.set_footer(text="hardish's extension for frames' personals sniper")
     await ctx.send(embed=e)
 
-# same as above omegalul
-@bot.command(name="a")
-@is_authorized()
-async def a(ctx):
-    ctx.command = bot.get_command("add")
-    await bot.invoke(ctx)
-
 # max price command
-@bot.command()
+@bot.command(aliases=["maxprice","max_price","mp"])
 @is_authorized()
-async def maxprice(ctx, item: str, mp=None):
+async def change_max_price(ctx, item: str, mp=None):
     try:
         if mp != None:
             int(mp)
@@ -617,17 +575,10 @@ async def maxprice(ctx, item: str, mp=None):
     e.set_footer(text="hardish's extension for frames' personals sniper")
     await ctx.send(embed=e)
 
-# same as above omegalul
-@bot.command(name="mp")
+# remove command
+@bot.command(aliases=["remove","r"])
 @is_authorized()
-async def mp(ctx):
-    ctx.command = bot.get_command("maxprice")
-    await bot.invoke(ctx)
-
-# max price command
-@bot.command()
-@is_authorized()
-async def remove(ctx, item: str):
+async def remove_item(ctx, item: str):
     if not item.isdigit() and linkable(item) == True:
         id = getidfromurl(item)
     elif linkable(item) == False and item.isdigit():
@@ -656,17 +607,10 @@ async def remove(ctx, item: str):
     e.set_footer(text="hardish's extension for frames' personals sniper")
     await ctx.send(embed=e)
 
-# same as above omegalul
-@bot.command(name="r")
-@is_authorized()
-async def r(ctx):
-    ctx.command = bot.get_command("remove")
-    await bot.invoke(ctx)
-
 # removeall command
-@bot.command()
+@bot.command(aliases=["removeall","ra"])
 @is_authorized()
-async def removeall(ctx):
+async def remove_all_items(ctx):
     settings = read_settings()
     settings[1]["items"] = {}
     overwrite(settings)
@@ -675,14 +619,6 @@ async def removeall(ctx):
     e = Embed(title="Removed all items successfully!", description=None, color=webhook_color)
     e.set_footer(text="hardish's extension for frames' personals sniper")
     await ctx.send(embed=e)
-
-# same as above omegalul
-@bot.command(name="ra")
-@is_authorized()
-async def ra(ctx):
-    ctx.command = bot.get_command("removeall")
-    await bot.invoke(ctx)
-
     
 runningSession = subprocess.Popen([sys.executable, "main.py"])
 bot_token = settings[0]["token"]
